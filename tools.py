@@ -35,7 +35,11 @@ def format_report(data: dict, limit: int = 10) -> str:
 
 
 USAGE = (
-    "使い方: /ja-check [場面] <文>  場面は " + " / ".join(f"{k}（{v}）" for k, v in SURFACE_LABELS.items())
+    "Usage: /ja-check [surface] <text>  Surfaces: "
+    + " / ".join(f"{k} ({v})" for k, v in SURFACE_LABELS.items())
+    + ". Omit the text to show the last answer's report.\n"
+    "使い方: /ja-check [場面] <文>  場面は "
+    + " / ".join(f"{k}（{v}）" for k, v in SURFACE_LABELS.items())
     + "。文を省くと、直前の返答の検査結果を表示します。"
 )
 
@@ -48,8 +52,12 @@ def make_command(guard):
         if not raw:
             last = guard.recall()
             if not last:
-                return ("この画面ではまだ検査した返答がありません（Telegram などのゲートウェイでは、"
-                        "他の人の返答が見えないよう直前の結果を残しません）。\n" + USAGE)
+                return (
+                    "No checked answer on this screen yet (on Telegram and other gateways, "
+                    "the last report is not kept so other people's answers stay private).\n"
+                    "この画面ではまだ検査した返答がありません（Telegram などのゲートウェイでは、"
+                    "他の人の返答が見えないよう直前の結果を残しません）。\n" + USAGE
+                )
             out = [f"直前の返答（モード: {last.get('mode')}）", format_report(last["report"])]
             rw = last.get("rewrite")
             if rw:

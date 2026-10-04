@@ -145,6 +145,8 @@ class FakeCtx:
 
     def register_command(self, name, handler, description="", args_hint=""):
         self.commands[name] = handler
+        self.command_meta = getattr(self, "command_meta", {})
+        self.command_meta[name] = {"description": description, "args_hint": args_hint}
 
     def register_skill(self, name, path):
         self.skills[name] = path
@@ -227,11 +229,27 @@ def test_slash_command_checks_text_and_shows_last_report():
     ctx = FakeCtx()
     g = make_guard(ctx)
     cmd = tools.make_command(g)
-    assert "まだ検査した返答がありません" in cmd("")
+    empty = cmd("")
+    assert empty.startswith("No checked answer")
+    assert "まだ検査した返答がありません" in empty
     assert "AI的な言い回し" in cmd("external " + FLAGGED)
     g.on_output(response_text=FLAGGED)
     assert "直前の返答" in cmd("")
-    assert "使い方" in cmd("help")
+    help_text = cmd("help")
+    assert help_text.startswith("Usage:")
+    assert "使い方" in help_text
+
+
+def test_ja_check_user_facing_strings_english_first():
+    plugin = load_plugin()
+    ctx = FakeCtx()
+    plugin.register(ctx)
+    desc = ctx.command_meta["ja-check"]["description"]
+    assert desc.startswith("Check Japanese text")
+    assert "日本語" in desc
+    assert tools.USAGE.lstrip().startswith("Usage:")
+    empty = tools.make_command(make_guard(FakeCtx()))("")
+    assert empty.startswith("No checked answer")
 
 
 def test_slash_command_shows_changed_lines_after_a_local_rewrite():
@@ -294,7 +312,9 @@ def test_gateway_answers_are_not_stored_for_other_users_to_see():
     g = make_guard(ctx)
     g.on_output(response_text=FLAGGED, platform="telegram")
     assert g_last(ctx) is None and g.recall() is None
-    assert "まだ検査した返答がありません" in tools.make_command(g)("")
+    empty = tools.make_command(g)("")
+    assert empty.startswith("No checked answer")
+    assert "まだ検査した返答がありません" in empty
 
 
 def test_enforce_stays_inside_the_time_budget():

@@ -39,7 +39,7 @@ def register(ctx):
     ctx.register_command(
         "ja-check",
         tools.make_command(guard),
-        description="日本語の AI 的な言い回しを検査（引数なしで直前の返答の結果）",
+        description="Check Japanese text for AI-style phrasing (no args: last answer's report) / 日本語の AI 的な言い回しを検査（引数なしで直前の返答の結果）",
         args_hint="[surface] <text>",
     )
     skills_dir = Path(__file__).parent / "skills"
