@@ -225,6 +225,63 @@ def test_tool_returns_json_with_findings():
     assert "unknown surface" in json.loads(tools.ja_writing_check({"text": FLAGGED, "surface": "fax"}))["error"]
 
 
+PLAIN_DA = "明日の会議は15時からに変更だ。資料は後で送る。場所はいつもの会議室を使う。"
+HOOK_DA = PLAIN_DA + "参加者は5人の予定だ。"
+
+
+def test_slash_surface_folds_case_fullwidth_and_surrounding_space():
+    cmd = tools.make_command(hook.Guard())
+    base = cmd("external " + PLAIN_DA).splitlines()[0]
+    assert "external の基準" in base and "指摘 3 件" in base
+    for arg in (
+        "External " + PLAIN_DA,
+        "EXTERNAL " + PLAIN_DA,
+        "external\u3000" + PLAIN_DA,
+        "  external  " + PLAIN_DA,
+        "\u3000External\u3000" + PLAIN_DA,
+        "ｅｘｔｅｒｎａｌ\u3000" + PLAIN_DA,
+        "external\t" + PLAIN_DA,
+    ):
+        assert cmd(arg).splitlines()[0] == base
+    mail = cmd("BUSINESS_EMAIL\u3000" + PLAIN_DA).splitlines()[0]
+    assert "business_email の基準" in mail and "指摘 3 件" in mail
+    assert "business_email の基準" in cmd("email " + PLAIN_DA).splitlines()[0]
+    whole = "Hello " + PLAIN_DA
+    shown = cmd(whole).splitlines()[0]
+    assert shown == tools.format_report(det.check(whole, None).to_dict()).splitlines()[0]
+    assert "chat の基準" in shown and shown != base
+
+
+def test_hook_and_tool_fold_the_same_surface_spellings():
+    ctx = FakeCtx({"platform_surfaces": {"tui": "External"}, "surface": "chat"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="tui")
+    assert g_last(ctx)["report"]["surface"] == "external"
+    ctx = FakeCtx({"surface": "\u3000business_email\u3000"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="cli")
+    assert g_last(ctx)["report"]["surface"] == "business_email"
+    ctx = FakeCtx({"surface": "ｅｘｔｅｒｎａｌ"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="cli")
+    assert g_last(ctx)["report"]["surface"] == "external"
+    ctx = FakeCtx({"platform_surfaces": {"cli": "email"}, "surface": "chat"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="cli")
+    assert g_last(ctx)["report"]["surface"] == "business_email"
+    ctx = FakeCtx({"surface": "newspaper"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="cli")
+    assert g_last(ctx)["report"]["surface"] == "chat"
+    ctx = FakeCtx({"platform_surfaces": {"tui": 1}, "surface": "external"})
+    g = make_guard(ctx)
+    g.on_output(response_text=HOOK_DA, platform="tui")
+    assert g_last(ctx)["report"]["surface"] == "chat"
+    data = json.loads(tools.ja_writing_check({"text": HOOK_DA, "surface": " ｅｘｔｅｒｎａｌ "}))
+    assert data["surface"] == "external"
+    assert "unknown surface" in json.loads(tools.ja_writing_check({"text": HOOK_DA, "surface": "   "}))["error"]
+
+
 def test_slash_command_checks_text_and_shows_last_report():
     ctx = FakeCtx()
     g = make_guard(ctx)

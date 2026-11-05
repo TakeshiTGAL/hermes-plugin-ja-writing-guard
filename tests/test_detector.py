@@ -147,6 +147,16 @@ def test_unknown_surface_raises_and_aliases_work():
         surfaces.get_surface("newspaper")
     assert surfaces.get_surface("email").name == "business_email"
     assert surfaces.get_surface("X").name == "sns"
+    assert surfaces.get_surface(None).name == "chat"
+    assert surfaces.get_surface("").name == "chat"
+    assert surfaces.get_surface(" External ").name == "external"
+    assert surfaces.get_surface("external\u3000").name == "external"
+    assert surfaces.get_surface("ｅｘｔｅｒｎａｌ").name == "external"
+    assert surfaces.get_surface("Ｘ").name == "sns"
+    with pytest.raises(ValueError):
+        surfaces.get_surface("   ")
+    with pytest.raises(ValueError):
+        surfaces.get_surface("business email")
 
 
 def test_threshold_override():
@@ -218,6 +228,6 @@ def test_sns_question_counts_but_a_plain_request_for_comments_does_not():
 def test_a_single_question_to_followers_is_ordinary_sns_writing():
     # Written for this test (not human-collected data): people ask their followers one question all the time.
     for text in ("週末は久しぶりに山へ行きました。紅葉はまだ少し早かったけれど、空気がおいしかったです。あなたにとって秋の楽しみは何ですか？",
-                 "この本、3回読み返しました。読むたびに気づくことが違います。皆さんは最近読んだ本で印象に残ったものはありますか？"):
+                 "この小説、3回読み返しました。読むたびに気づくことが違います。皆さんは最近読んだ本で印象に残ったものはありますか？"):
         r = det.check(text, "sns")
         assert not r.over_threshold and "template.sns_question" not in rule_ids(r), text

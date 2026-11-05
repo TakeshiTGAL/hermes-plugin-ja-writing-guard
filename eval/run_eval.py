@@ -46,7 +46,7 @@ def load_plugin():
         mod = importlib.util.module_from_spec(spec)
         sys.modules[PACKAGE] = mod
         spec.loader.exec_module(mod)
-    return importlib.import_module(PACKAGE + ".detector")
+    return importlib.import_module("ja_writing_guard_plugin.detector")
 
 
 SETS = {

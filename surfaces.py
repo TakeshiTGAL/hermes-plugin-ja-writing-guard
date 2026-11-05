@@ -8,6 +8,7 @@ finding, as an outside reader expects です・ます.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 
 SURFACE_LABELS = {
@@ -85,12 +86,32 @@ SURFACES: dict[str, Surface] = {
 }
 
 
+_SURFACE_ALIASES = {
+    "email": "business_email", "mail": "business_email", "press": "external",
+    "public": "external", "x": "sns", "twitter": "sns", "tech": "tech_doc",
+    "docs": "tech_doc", "doc": "tech_doc",
+}
+
+
+def canonical_surface(name: str | None) -> str | None:
+    """Fold case, fullwidth forms and surrounding whitespace to one surface key.
+
+    ``None`` and ``""`` are the default ``chat``. A whitespace-only or unknown
+    name returns ``None``: ``get_surface`` rejects it, and the hook keeps chat.
+    """
+    if not isinstance(name, str):
+        return DEFAULT_SURFACE if name is None else None
+    if name == "":
+        return DEFAULT_SURFACE
+    folded = unicodedata.normalize("NFKC", name).strip().lower().replace("-", "_")
+    if not folded:
+        return None
+    key = _SURFACE_ALIASES.get(folded, folded)
+    return key if key in SURFACES else None
+
+
 def get_surface(name: str | None) -> Surface:
-    key = (name or DEFAULT_SURFACE).strip().lower().replace("-", "_")
-    aliases = {"email": "business_email", "mail": "business_email", "press": "external",
-               "public": "external", "x": "sns", "twitter": "sns", "tech": "tech_doc",
-               "docs": "tech_doc", "doc": "tech_doc"}
-    key = aliases.get(key, key)
-    if key not in SURFACES:
+    key = canonical_surface(name)
+    if key is None:
         raise ValueError(f"unknown surface {name!r}; choose one of {', '.join(SURFACES)}")
     return SURFACES[key]

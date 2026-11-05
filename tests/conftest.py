@@ -23,9 +23,21 @@ def load_plugin():
 
 
 def load_module(name: str):
-    """Import a submodule (detector, rules, surfaces, rewrite, ...) of the plugin package."""
+    """Import one plugin submodule. The name has to be one of the fixed modules below."""
     load_plugin()
-    return importlib.import_module(f"{PACKAGE}.{name}")
+    if name == "detector":
+        return importlib.import_module("ja_writing_guard_plugin.detector")
+    if name == "rules":
+        return importlib.import_module("ja_writing_guard_plugin.rules")
+    if name == "surfaces":
+        return importlib.import_module("ja_writing_guard_plugin.surfaces")
+    if name == "rewrite":
+        return importlib.import_module("ja_writing_guard_plugin.rewrite")
+    if name == "hook":
+        return importlib.import_module("ja_writing_guard_plugin.hook")
+    if name == "tools":
+        return importlib.import_module("ja_writing_guard_plugin.tools")
+    raise ImportError(name)
 
 
 def load_detector():

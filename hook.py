@@ -53,7 +53,7 @@ import time
 
 from .detector import check, is_japanese
 from .rewrite import rewrite
-from .surfaces import SURFACES
+from .surfaces import canonical_surface
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +172,8 @@ class Guard:
 
     def surface_for(self, platform: str, conf: dict) -> str:
         surface = conf["platform_surfaces"].get(platform or "") or conf["surface"]
-        return surface if surface in SURFACES else "chat"
+        key = canonical_surface(surface) if isinstance(surface, str) else None
+        return key if key else "chat"
 
     # ----------------------------------------------------------------- llm
     def llm(self, messages: list[dict], max_tokens: int, timeout: float) -> str:

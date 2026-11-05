@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from .detector import check
-from .surfaces import SURFACE_LABELS, SURFACES
+from .surfaces import SURFACE_LABELS, canonical_surface
 
 
 def ja_writing_check(args: dict, **kwargs) -> str:
@@ -44,6 +44,19 @@ USAGE = (
 )
 
 
+def _slash_surface(raw: str) -> tuple[str | None, str]:
+    """Take a leading surface name. Any unicode space, including U+3000, separates it."""
+    for i, ch in enumerate(raw):
+        if not ch.isspace():
+            continue
+        head, rest = raw[:i], raw[i:].strip()
+        key = canonical_surface(head) if rest else None
+        if key:
+            return key, rest
+        return None, raw
+    return None, raw
+
+
 def make_command(guard):
     def handler(raw_args: str = "") -> str:
         raw = (raw_args or "").strip()
@@ -66,10 +79,7 @@ def make_command(guard):
                     out.append("変わった行:")
                     out.extend(line for line in rw["diff"] if line[:1] in "+-" and line[:3] not in ("+++", "---"))
             return "\n".join(out)
-        surface = None
-        head, _, rest = raw.partition(" ")
-        if head in SURFACES and rest.strip():
-            surface, raw = head, rest.strip()
+        surface, raw = _slash_surface(raw)
         try:
             return format_report(check(raw, surface).to_dict())
         except ValueError as exc:
